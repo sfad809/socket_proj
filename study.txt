@@ -1,0 +1,98 @@
+#include <winsock2.h>
+
+// ===== Initialize =====
+WIN32
+	int WSAStartup(WORD mVersionRequired, LPWSADATA lpWSAData)
+	int WSACleanup(void)
+
+	SOCKET socket(int af, int type, int protocol)
+	int closesocket(SOCKET s)
+LINUX
+	int socket(int domain, int type, int protocol)
+	int close(int fd)
+
+
+// ===== format =====
+address format
+	AF_INET   2  // Internetwork: UDP, TCP
+	AF_INET6  23 // Internetwork Version 6
+	AF_BTH    32 // Bluetooth RFCOMM/L2CAP protocols
+
+socket type
+	SOCK_STREAM : 신뢰성 있는, 연결형, TCP
+	SOCK_DGRAM  : 신뢰성 없는, 비연결형, UDP
+
+protocol
+	IPPROTO_TCP, IPPROTO_UDP
+
+
+// ===== structures =====
+struct sockaddr (16)
+{
+	unsigned short family
+	char data[14];
+}
+
+// IPv4
+WIN32 : <winsock2.h>
+LINUX : <netinet/in.h>
+
+struct sockaddr_in {
+	short			sin_family
+	unsigned short	sin_port
+	struct in_addr	sin_addr
+	char			sin_zero[8];
+}
+
+// IPv6
+WIN32 : <ws2tcpip.h>
+LINUX : <netinet/in.h>
+
+struct sockaddr_in6 {
+	short           sin6_family
+	u_short         sin6_port
+	u_long          sin6_flowinfo // 0
+	struct in6_addr sin6_addr
+	u_long          sin6_scope_id // 0
+}
+
+to (sockaddr *)
+WIN32 (SOCKADDR *) casting
+
+
+// ===== conversion [ Endian / IP addr / DNS ] =====
+IP addr  : Big Endian
+Port num : Big Endian
+
+WIN32: <winsock2.h>
+LINUX: <arpa/inet.h>
+// host, network, short, long
+	hton[s/l]
+	ntoh[s/l]
+
+WIN32: <ws2tcpip.h>
+LINUX: <arpa/inet.h>
+// IP Conversion
+// presentation(string), network(bin)
+	inet_pton(int af, const char* src, void *dst);
+
+	WIN32: inet_ntop(int af, const char *src, void *dst, size_t size);
+	LINUX: inet_ntop(int af, const void *src, void *dst, socklen_t size);
+
+WIN32: <winsock2.h>
+LINUX: <netdb.h>
+
+// DNS to IP
+	struct hostent *gethostbyname(const char *name);
+// IP to DNS
+	struct hostent *gethostbyaddr(const char *addr, int len, int af);
+
+struct hostent {
+	char  *h_name;
+	char **h_aliases;
+	short  h_addrtype;
+	short  h_length;
+	char **h_addr_list;
+};
+
+// ===== TCP Server / Client =====
