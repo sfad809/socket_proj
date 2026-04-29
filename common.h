@@ -1,11 +1,11 @@
 #pragma once
 #include <stdio.h>
+#include <stdlib.h>
 
 #if defined(__unix__)
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdlib.h> // exit
 
 #include <errno.h>  // defined errno
 #include <string.h> // char* strerror(int errnum)
@@ -20,14 +20,14 @@ typedef int SOCKET;
 #define SOCKET_ERROR   -1
 #define closesocket(s) close(s)
 
-void err_quit(const char *msg)
+inline void err_quit(const char *msg)
 {
 	char *msgbuf = strerror(errno);
 	printf("[%s] %s\n", msg, msgbuf);
 	exit(1);
 }
 
-void err_display(const char *msg)
+inline void err_display(const char *msg)
 {
 	char *msgbuf = strerror(errno);
 	printf("[%s] %s\n", msg, msgbuf);
@@ -48,7 +48,7 @@ void err_display(const char *msg)
 // compatibilities
 typedef int socklen_t;
 
-void err_quit(const char *msg)
+inline void err_quit(const char *msg)
 {
 	LPVOID lpMsgBuf;
 	FormatMessageA(
@@ -63,7 +63,7 @@ void err_quit(const char *msg)
 	exit(1);
 }
 
-void err_display(const char *msg)
+inline void err_display(const char *msg)
 {
 	LPVOID lpMsgBuf;
 	FormatMessageA(
