@@ -1,67 +1,68 @@
-#include "../common.h"
+#include "TCPClient.h"
 
-#define SERVERPORT 9000
-#define BUFSIZE    512
-
-char *SERVERIP = (char *)"127.0.0.1";
-
-int main(int argc, char *argv[])
+TCPClient::TCPClient()
+	: _sock(INVALID_SOCKET)
 {
-	int retval;
-	if(argc > 1) SERVERIP = argv[1];
-
 #if defined(_WIN32) || defined(_WIN64)
 	WSADATA wsa;
-	if(WSAStartup(MAKEWORD(2,2), &wsa) != 0) return 1;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
 #endif
+}
 
-	// socket
-	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock == INVALID_SOCKET) err_quit("socket()");
-
-	// connect
-	struct sockaddr_in serveraddr {};
-	serveraddr.sin_family = AF_INET;
-	inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
-	serveraddr.sin_port = htons(SERVERPORT);
-	retval = connect(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
-	if(retval == SOCKET_ERROR) err_quit("connect()");
-
-	char buf[BUFSIZE + 1];
-	int len;
-
-	while(1)
-	{
-		printf("\n[TCP Client] send:");
-		if(fgets(buf, BUFSIZE+1, stdin) == NULL) break;
-
-		len = (int)strlen(buf);
-		if(buf[len-1] == '\n') buf[len-1] = '\0';
-		len = strlen(buf);
-		if(len == 0) break;
-
-		retval = send(sock, buf, len, 0);
-		if(retval == SOCKET_ERROR)
-		{
-			err_display("send()");
-			break;
-		}
-		printf("[TCP Client] send %d bytes\n", retval);
-
-		retval = recv(sock, buf, retval, MSG_WAITALL);
-		if(retval == SOCKET_ERROR)
-		{
-			err_display("recv()");
-			break;
-		}
-		else if(retval == 0) break;
-		buf[retval] = '\0';
-		printf("[TCP Client] recieved: %s(%d byte)\n", buf, retval);
-	}
-	closesocket(sock);
-	
+TCPClient::~TCPClient()
+{
+	Disconnect();
 #if defined(_WIN32) || defined(_WIN64)
 	WSACleanup();
 #endif
-	return 0;
+}
+
+bool TCPClient::Connect(const char *ip, int port)
+{
+	if(IsConnected()) return true;
+
+	_sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(_sock == INVALID_SOCKET) return false;
+
+	struct sockaddr_in serveraddr {};
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_port = htons((unsigned short)port);
+	if(inet_pton(AF_INET, ip, &serveraddr.sin_addr) != 1)
+	{
+		Disconnect();
+		return false;
+	}
+
+	if(connect(_sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+	{
+		Disconnect();
+		return false;
+	}
+
+	return true;
+}
+
+void TCPClient::Disconnect()
+{
+	if(_sock == INVALID_SOCKET) return;
+
+	closesocket(_sock);
+	_sock = INVALID_SOCKET;
+}
+
+bool TCPClient::IsConnected() const
+{
+	return _sock != INVALID_SOCKET;
+}
+
+int TCPClient::Send(const char *buf, int len)
+{
+	if(!IsConnected()) return SOCKET_ERROR;
+	return send(_sock, buf, len, 0);
+}
+
+int TCPClient::Recv(char *buf, int len)
+{
+	if(!IsConnected()) return SOCKET_ERROR;
+	return recv(_sock, buf, len, 0);
 }
