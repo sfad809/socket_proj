@@ -96,3 +96,23 @@ struct hostent {
 };
 
 // ===== TCP Server / Client =====
+
+
+// ===== Multi-Thread =====
+Address is Constants
+
+-- Win32
+HANDLE CreateThread( ... )
+	dwStackSize, lpStartAddress 등등...
+	thread func: DWORD WINAPI (*proc)(LPVOID lpParameter)
+
+__stdcall == CALLBACK, WINAPI, APIENTRY, APIPRIVATE PASCAL
+
+Process Class  (process)
+Priority Level (thread)
+
+Starved
+Foreground Program
+
+Context Switching
+	Overhead(부하): 처리 속도(양) < 로드 속도

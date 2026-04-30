@@ -14,11 +14,14 @@
 #include <arpa/inet.h>  // host-network, p-network
 #include <netdb.h>      // IP, DNS
 
+#include <pthread.h>
+
 // compatibilities
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR   -1
 #define closesocket(s) close(s)
+#define HANDLE pthread_t
 
 inline void err_quit(const char *msg)
 {
@@ -77,3 +80,12 @@ inline void err_display(const char *msg)
 	LocalFree(lpMsgBuf);
 }
 #endif
+
+inline void init_server()
+{
+}
+
+inline void close_server()
+{
+	
+}

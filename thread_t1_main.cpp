@@ -1,15 +1,10 @@
 #include "common.h"
 
-int create_thread_main();
-int thread_priority_main();
-int wait_for_thread_main();
-
-int main(int argc, char *argv[])
+struct Point3D
 {
-	return 0;
-}
+	int x, y, z;
+};
 
-struct Point3D { int x, y, z; };
 DWORD WINAPI MyThread(LPVOID arg)
 {
 	Sleep(1000);
@@ -19,7 +14,7 @@ DWORD WINAPI MyThread(LPVOID arg)
 	return 0;
 }
 
-int create_thread_main()
+int main(int argc, char *argv[])
 {
 	Point3D pt1 = { 10, 20, 30 };
 	HANDLE hThread1 = CreateThread(NULL, 0, MyThread, &pt1, 0, NULL);
@@ -34,13 +29,4 @@ int create_thread_main()
 	printf("Running main() %d\n", GetCurrentThreadId());
 	Sleep(2000);
 	return 0;
-}
-
-int thread_priority_main()
-{
-	
-}
-
-int wait_for_thread_main()
-{
 }
