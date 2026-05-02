@@ -1,4 +1,4 @@
-#include "tcp/TCPServer.h"
+#include "common.h"
 
 #define SERVERPORT 9000
 #define BUFSIZE    512
@@ -9,12 +9,12 @@ DWORD WINAPI ProcessClient(LPVOID arg)
 void* ProcessClient(void *arg)
 #endif
 {
-	SOCKET client_sock = *(SOCKET*)arg;
-	int retval;
+	SOCKET client_sock = (SOCKET)arg;
 	struct sockaddr_in clientaddr;
-	char addr[INET_ADDRSTRLEN];
 	socklen_t addrlen;
 
+	int retval;
+	char addr[INET_ADDRSTRLEN];
 	char buf[BUFSIZE+1];
 	
 	addrlen = sizeof(clientaddr);
@@ -41,25 +41,28 @@ void* ProcessClient(void *arg)
 			break;
 		}
 	}
+
+	close_tcp_server(client_sock, false);
+	printf("[TCP Server] Client disconnected: IP=%s, Port=%d\n", addr, ntohs(clientaddr.sin_port));
 	return 0;
 }
 
 int main()
 {
-	TCPServer server;
-	if(!server.Start(SERVERPORT)) err_quit("server.Start()");
+	SOCKET server_sock;
+	if(!init_tcp_server(server_sock, SERVERPORT)) return 1;
+	printf("\n[TCP Server] Ready to accept clients on port %d.\n", SERVERPORT);
 
-	int retval;
-	struct sockaddr_in clientaddr;
-	socklen_t addrlen;
 	SOCKET client_sock;
+	struct sockaddr_in clientaddr;
+	socklen_t addrlen = sizeof(clientaddr);
 
 	HANDLE hThread;
 	while(1)
 	{
-		addrlen = sizeof(clientaddr);
-		client_sock = server.Accept(&clientaddr, &addrlen);
-		if(client_sock == INVALID_SOCKET) {
+		client_sock = accept(server_sock, (struct sockaddr *)&clientaddr, &addrlen);
+		if(client_sock == INVALID_SOCKET)
+		{
 			err_display("accept()");
 			break;
 		}
@@ -69,15 +72,18 @@ int main()
 		printf("\n[TCP Server] Client Connected: IP=%s, Port=%d\n", addr, ntohs(clientaddr.sin_port));
 
 #if defined(WIN32)
-		hThread = CreateThread(NULL, 0, ProcessClient,
-			(LPVOID)client_sock, 0, NULL);
-		if(hThread == NULL) server.CloseClient(client_sock);
-		else CloseHandle(hThread);a
+		hThread = CreateThread(NULL, 0, ProcessClient, (LPVOID)client_sock, 0, NULL);
+		if(hThread) close_tcp_server(client_sock, false);
+		else CloseHandle(hThread);
 #else
-		pthread_create(&hThread, NULL, ProcessClient, (void*)&client_sock);
-		pthread_detach(hThread);
+		if (pthread_create(&hThread, NULL, ProcessClient, (void*)client_sock) != 0)
+		{
+			err_display("pthread_create()");
+			closesocket(client_sock);
+		}
+		else pthread_detach(hThread);
 #endif
 	}
-	server.Stop();
+	close_tcp_server(server_sock, true);
 	return 0;
 }

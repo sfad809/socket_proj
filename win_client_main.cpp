@@ -1,6 +1,5 @@
-#include <stdarg.h>
 #include <string.h>
-#include "tcp/TCPClient.h"
+#include "common.h"
 
 #define MAIN_BUTTON_ID      100
 #define IP_EDIT_ID          200
@@ -26,8 +25,6 @@ HWND _hConnectButton;
 HWND _hLogEdit;
 HWND _hMessageEdit;
 HWND _hSendButton;
-
-TCPClient _tcpClient;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
@@ -80,8 +77,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-
-	_tcpClient.Disconnect();
 	return (int)msg.wParam;
 }
 
@@ -140,13 +135,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 	break;
 	case WM_DESTROY:
-		_tcpClient.Disconnect();
 		PostQuitMessage(0);
 	return 0;
 	}
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+SOCKET _sock;
 LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg)
@@ -216,7 +211,7 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 		{
 		case CONNECT_BUTTON_ID:
 		{
-			if(_tcpClient.IsConnected())
+			if(_sock != INVALID_SOCKET)
 			{
 				AppendLog("[TCP] already connected\r\n");
 				return 0;
@@ -229,7 +224,7 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 
 			int port = atoi(portText);
 			AppendLog("[TCP] connecting to %s:%d...\r\n", ip, port);
-			if(!_tcpClient.Connect(ip, port))
+			if(!init_tcp_client(_sock, port))
 			{
 				AppendLog("[TCP] connect failed\r\n");
 				return 0;
@@ -241,7 +236,7 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 		}
 		case SEND_BUTTON_ID:
 		{
-			if(!_tcpClient.IsConnected())
+			if(_sock == INVALID_SOCKET)
 			{
 				AppendLog("[TCP] connect first\r\n");
 				return 0;
@@ -253,11 +248,11 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 			int len = (int)strlen(buf);
 			if(len == 0) return 0;
 
-			int retval = _tcpClient.Send(buf, len);
+			int retval = send(_sock, buf, len, 0);
 			if(retval == SOCKET_ERROR)
 			{
 				AppendLog("[TCP] send failed\r\n");
-				_tcpClient.Disconnect();
+				close_tcp_server(_sock, true);
 				EnableWindow(_hConnectButton, TRUE);
 				return 0;
 			}
@@ -265,18 +260,18 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 			AppendLog("[send] %s\r\n", buf);
 			SetWindowTextA(_hMessageEdit, "");
 
-			retval = _tcpClient.Recv(buf, sizeof(buf) - 1);
+			retval = recv(_sock, buf, len, 0);
 			if(retval == SOCKET_ERROR)
 			{
 				AppendLog("[TCP] recv failed\r\n");
-				_tcpClient.Disconnect();
+				close_tcp_server(_sock, true);
 				EnableWindow(_hConnectButton, TRUE);
 				return 0;
 			}
 			if(retval == 0)
 			{
 				AppendLog("[TCP] disconnected by server\r\n");
-				_tcpClient.Disconnect();
+				close_tcp_server(_sock, true);
 				EnableWindow(_hConnectButton, TRUE);
 				return 0;
 			}
@@ -295,7 +290,7 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 		DestroyWindow(hWnd);
 	return 0;
 	case WM_DESTROY:
-		_tcpClient.Disconnect();
+		close_tcp_server(_sock, true);
 		_hClientWnd = NULL;
 		_hIpEdit = NULL;
 		_hPortEdit = NULL;

@@ -81,11 +81,70 @@ inline void err_display(const char *msg)
 }
 #endif
 
-inline void init_server()
+inline void close_tcp_server(SOCKET &sock, bool release)
 {
+	if(sock == INVALID_SOCKET) return;
+	
+	closesocket(sock);
+	sock = INVALID_SOCKET;
+
+#if defined(_WIN32) || defined(_WIN64)
+	if(release) WSACleanup();
+#endif
 }
 
-inline void close_server()
+inline bool init_tcp_server(SOCKET &sock, u_short port)
 {
-	
+#if defined(_WIN32) || defined(_WIN64)
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
+#endif
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(sock == INVALID_SOCKET) { err_display("socket()"); return false; }
+
+	struct sockaddr_in serveraddr {};
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serveraddr.sin_port = htons((unsigned short)port);
+
+	if(bind(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+	{
+		err_display("bind()");
+		close_tcp_server(sock, true);
+		return false;
+	}
+
+	if(listen(sock, SOMAXCONN) == SOCKET_ERROR)
+	{
+		err_display("listen()");
+		close_tcp_server(sock, true);
+		return false;
+	}
+
+	return true;
+}
+
+inline bool init_tcp_client(SOCKET &sock, u_short port)
+{
+#if defined(_WIN32) || defined(_WIN64)
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
+#endif
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(sock == INVALID_SOCKET) { err_display("socket()"); return false; }
+
+	struct sockaddr_in serveraddr {};
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serveraddr.sin_port = htons((unsigned short)port);
+
+	if(connect(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+	{
+		err_display("connect()");
+		close_tcp_server(sock, true);
+		return false;
+	}
+	return true;
 }
