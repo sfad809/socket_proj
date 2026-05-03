@@ -9,7 +9,7 @@ DWORD WINAPI ProcessClient(LPVOID arg)
 void* ProcessClient(void *arg)
 #endif
 {
-	SOCKET client_sock = (SOCKET)arg;
+	SOCKET client_sock = (SOCKET)(intptr_t)arg;
 	struct sockaddr_in clientaddr;
 	socklen_t addrlen;
 
@@ -55,11 +55,12 @@ int main()
 
 	SOCKET client_sock;
 	struct sockaddr_in clientaddr;
-	socklen_t addrlen = sizeof(clientaddr);
+	socklen_t addrlen;
 
 	HANDLE hThread;
 	while(1)
 	{
+		addrlen = sizeof(clientaddr);
 		client_sock = accept(server_sock, (struct sockaddr *)&clientaddr, &addrlen);
 		if(client_sock == INVALID_SOCKET)
 		{
@@ -72,11 +73,11 @@ int main()
 		printf("\n[TCP Server] Client Connected: IP=%s, Port=%d\n", addr, ntohs(clientaddr.sin_port));
 
 #if defined(WIN32)
-		hThread = CreateThread(NULL, 0, ProcessClient, (LPVOID)client_sock, 0, NULL);
-		if(hThread) close_tcp_server(client_sock, false);
+		hThread = CreateThread(NULL, 0, ProcessClient, (LPVOID)(intptr_t)client_sock, 0, NULL);
+		if(hThread == NULL) close_tcp_server(client_sock, false);
 		else CloseHandle(hThread);
 #else
-		if (pthread_create(&hThread, NULL, ProcessClient, (void*)client_sock) != 0)
+		if (pthread_create(&hThread, NULL, ProcessClient, (void*)(intptr_t)client_sock) != 0)
 		{
 			err_display("pthread_create()");
 			closesocket(client_sock);

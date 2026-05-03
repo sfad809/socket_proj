@@ -10,12 +10,14 @@ int main()
 
 	printf("\n[TCP Server] Server Initialized: Port=%d\n", SERVERPORT);
 
-	struct sockaddr_in clientaddr;
-	socklen_t addrlen = sizeof(clientaddr);
 	SOCKET client_sock;
+	struct sockaddr_in clientaddr;
+	socklen_t addrlen;
 	while(1)
 	{
-		if(accept(server_sock, (struct sockaddr *)&clientaddr, &addrlen)  == INVALID_SOCKET)
+		addrlen = sizeof(clientaddr);
+		client_sock = accept(server_sock, (struct sockaddr *)&clientaddr, &addrlen);
+		if(client_sock == INVALID_SOCKET)
 		{
 			err_display("accept()");
 			break;

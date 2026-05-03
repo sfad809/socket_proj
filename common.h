@@ -125,7 +125,7 @@ inline bool init_tcp_server(SOCKET &sock, u_short port)
 	return true;
 }
 
-inline bool init_tcp_client(SOCKET &sock, u_short port)
+inline bool init_tcp_client(SOCKET &sock, char *ip, u_short port)
 {
 #if defined(_WIN32) || defined(_WIN64)
 	WSADATA wsa;
@@ -137,8 +137,14 @@ inline bool init_tcp_client(SOCKET &sock, u_short port)
 
 	struct sockaddr_in serveraddr {};
 	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serveraddr.sin_port = htons((unsigned short)port);
+
+	if(inet_pton(AF_INET, ip, &serveraddr.sin_addr) != 1)
+	{
+		err_display("inet_pton()");
+		close_tcp_server(sock, true);
+		return false;
+	}
 
 	if(connect(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
 	{

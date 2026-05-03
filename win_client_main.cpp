@@ -141,7 +141,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-SOCKET _sock;
+SOCKET _sock = INVALID_SOCKET;
 LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg)
@@ -224,7 +224,7 @@ LRESULT CALLBACK ClientWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 
 			int port = atoi(portText);
 			AppendLog("[TCP] connecting to %s:%d...\r\n", ip, port);
-			if(!init_tcp_client(_sock, port))
+			if(!init_tcp_client(_sock, ip, port))
 			{
 				AppendLog("[TCP] connect failed\r\n");
 				return 0;
